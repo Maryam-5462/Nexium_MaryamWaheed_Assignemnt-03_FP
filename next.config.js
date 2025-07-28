@@ -11,11 +11,9 @@ const nextConfig = {
     optimizePackageImports: ['pdf-parse', 'mongodb']
   },
   
-  // Proper API route configuration
-  serverActions: {
-    bodySizeLimit: '5mb'
-  },
-
+  // API route configuration
+  output: 'standalone', // Crucial for API routes
+  
   // Webpack configuration
   webpack: (config, { isServer }) => {
     // Prevent PDF files from being processed during build
@@ -33,5 +31,7 @@ const nextConfig = {
     return config;
   }
 }
+
+module.exports = nextConfig
 
 module.exports = nextConfig
