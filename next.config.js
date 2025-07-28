@@ -6,19 +6,25 @@
 // }
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Disable Turbopack for MongoDB compatibility
   experimental: {
-    serverActions: true,
-    optimizePackageImports: ['pdf-parse', 'mongodb'],
-    serverComponentsExternalPackages: ['mongodb'] // Important for MongoDB
+    serverActions: {},
+    optimizePackageImports: ['pdf-parse'],
+    // New format for external packages
+    serverExternalPackages: ['mongodb']
   },
   
-  // API route configuration
-  output: 'standalone',
-  
+  // Disable Turbopack until MongoDB compatibility improves
+  turbo: {
+    resolveAlias: {
+      // Add any necessary aliases here
+    }
+  },
+
   // Webpack configuration
   webpack: (config, { isServer }) => {
-    // Prevent PDF and MongoDB native extensions from being processed
-    config.module.noParse = [/\.pdf$/, /mongodb-client-encryption/];
+    // Prevent PDF files from being processed during build
+    config.module.noParse = /\.pdf$/;
 
     // Add necessary polyfills
     config.resolve.fallback = {
@@ -28,17 +34,7 @@ const nextConfig = {
       crypto: require.resolve('crypto-browserify')
     };
 
-    // Exclude MongoDB native extensions from bundling
-    config.externals = config.externals || [];
-    config.externals.push('mongodb-client-encryption');
-    
     return config;
-  },
-  
-  // Environment variables configuration
-  env: {
-    MONGODB_URI: process.env.MONGODB_URI,
-    MONGODB_DB: process.env.MONGODB_DB
   }
 }
 
