@@ -1,22 +1,17 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Basic configuration for Vercel
+  output: process.env.NODE_ENV === 'production' ? 'standalone' : undefined,
+  
   experimental: {
-    serverActions: {},
-    optimizePackageImports: ['pdf-parse']
+    serverActions: true, // Simple boolean format for Vercel compatibility
+    optimizePackageImports: ['pdf-parse', 'mongodb']
   },
-  serverExternalPackages: ['mongodb'],
-  webpack: (config, { isServer }) => {  // Destructure isServer from the second parameter
+
+  // Webpack configuration
+  webpack: (config, { isServer }) => {
     // Prevent processing of PDF and MongoDB native files
-    config.module.noParse = [/\.pdf$/, /mongodb-client-encryption/];
-    
-    // Correct externals configuration
-    config.externals = {
-      ...(config.externals || {}),
-      'mongodb-client-encryption': 'commonjs mongodb-client-encryption',
-      'aws4': 'commonjs aws4',
-      'snappy': 'commonjs snappy',
-      'kerberos': 'commonjs kerberos'
-    };
+    config.module.noParse = /\.pdf$/;
     
     // Client-side polyfills (only add if not server)
     if (!isServer) {
