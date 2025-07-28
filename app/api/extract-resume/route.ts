@@ -33,13 +33,14 @@
 
 //   return NextResponse.json({ success: true, textLength: resumeText.length })
 // }
-
 import { NextRequest, NextResponse } from 'next/server'
 import { MongoClient } from 'mongodb'
 import pdf from 'pdf-parse'
 
 const uri = process.env.MONGODB_URI!
 const dbName = process.env.MONGODB_DB!
+
+export const dynamic = 'force-dynamic' // Add this line
 
 export async function POST(req: NextRequest) {
   const formData = await req.formData()
@@ -51,8 +52,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
   }
 
+  if (file.type !== 'application/pdf') {
+    return NextResponse.json({ error: 'Invalid file type' }, { status: 400 })
+  }
+
   const buffer = Buffer.from(await file.arrayBuffer())
-  const text = await pdf(buffer)
+  
+  let text
+  try {
+    text = await pdf(buffer)
+  } catch (pdfError) {
+    console.error("PDF parsing error:", pdfError)
+    return NextResponse.json({ error: 'PDF processing failed' }, { status: 400 })
+  }
 
   try {
     const client = await new MongoClient(uri).connect()
@@ -66,10 +78,10 @@ export async function POST(req: NextRequest) {
       created_at: new Date()
     })
 
-    client.close()
+    await client.close()
     return NextResponse.json({ text: text.text })
   } catch (error) {
     console.error("MongoDB error:", error)
-    return NextResponse.json({ error: 'MongoDB insert failed' }, { status: 500 })
+    return NextResponse.json({ error: 'Database operation failed' }, { status: 500 })
   }
 }
