@@ -5,6 +5,9 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabaseClient'
 import jsPDF from 'jspdf'
 
+export const runtime = 'nodejs'; // Explicitly use Node.js runtime
+export const dynamic = 'force-dynamic'; // Ensure dynamic execution
+
 export default function SavedResumesPage() {
   const [resumes, setResumes] = useState<any[]>([])
   const [search, setSearch] = useState('')

@@ -35,53 +35,93 @@
 // }
 import { NextRequest, NextResponse } from 'next/server'
 import { MongoClient } from 'mongodb'
-import pdf from 'pdf-parse'
+
+// Critical configuration to prevent build-time issues
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs' // Explicitly use Node.js runtime
+export const fetchCache = 'force-no-store' // Prevent any caching behavior
+
+// Isolate PDF parsing to prevent build-time processing
+async function parsePdfBuffer(buffer: Buffer) {
+  // Dynamic import to prevent bundling during build
+  const { default: pdf } = await import('pdf-parse')
+  return pdf(buffer)
+}
 
 const uri = process.env.MONGODB_URI!
 const dbName = process.env.MONGODB_DB!
 
-export const dynamic = 'force-dynamic' // Add this line
-
 export async function POST(req: NextRequest) {
-  const formData = await req.formData()
-  const file = formData.get('file') as File
-  const user_id = formData.get('user_id') as string
-  const title = formData.get('title') as string
-
-  if (!file || !user_id || !title) {
-    return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
-  }
-
-  if (file.type !== 'application/pdf') {
-    return NextResponse.json({ error: 'Invalid file type' }, { status: 400 })
-  }
-
-  const buffer = Buffer.from(await file.arrayBuffer())
-  
-  let text
   try {
-    text = await pdf(buffer)
-  } catch (pdfError) {
-    console.error("PDF parsing error:", pdfError)
-    return NextResponse.json({ error: 'PDF processing failed' }, { status: 400 })
-  }
+    const formData = await req.formData()
+    const file = formData.get('file') as File | null
+    const user_id = formData.get('user_id') as string | null
+    const title = formData.get('title') as string | null
 
-  try {
-    const client = await new MongoClient(uri).connect()
-    const db = client.db(dbName)
-    const collection = db.collection('full_texts')
+    // Validate required fields
+    if (!file || !user_id || !title) {
+      return NextResponse.json(
+        { error: 'Missing required fields' },
+        { status: 400 }
+      )
+    }
 
-    await collection.insertOne({
-      user_id,
-      title,
-      text: text.text,
-      created_at: new Date()
-    })
+    // Validate file type
+    if (file.type !== 'application/pdf') {
+      return NextResponse.json(
+        { error: 'Only PDF files are accepted' },
+        { status: 400 }
+      )
+    }
 
-    await client.close()
-    return NextResponse.json({ text: text.text })
+    // Process PDF
+    const buffer = Buffer.from(await file.arrayBuffer())
+    const text = await parsePdfBuffer(buffer)
+
+    // Database operations
+    const client = await MongoClient.connect(uri)
+    try {
+      const db = client.db(dbName)
+      const collection = db.collection('full_texts')
+
+      const result = await collection.insertOne({
+        user_id,
+        title,
+        text: text.text,
+        created_at: new Date(),
+        updated_at: new Date()
+      })
+
+      return NextResponse.json({
+        success: true,
+        text: text.text,
+        documentId: result.insertedId
+      })
+    } finally {
+      await client.close()
+    }
   } catch (error) {
-    console.error("MongoDB error:", error)
-    return NextResponse.json({ error: 'Database operation failed' }, { status: 500 })
+    console.error('API Error:', error)
+
+    // Handle different error types
+    if (error instanceof Error) {
+      return NextResponse.json(
+        { error: error.message || 'Processing failed' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json(
+      { error: 'An unknown error occurred' },
+      { status: 500 }
+    )
   }
+}
+
+// Add this to prevent static generation attempts
+export async function GET() {
+  return NextResponse.json(
+    { error: 'Method not allowed' },
+    { status: 405 }
+  )
 }
