@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server'
-import clientPromise from '@/lib/mongodb'
+import { MongoClient } from 'mongodb'
 
-// Critical configuration to prevent build issues
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 export const fetchCache = 'force-no-store'
 
+const uri = process.env.MONGODB_URI!
+
 export async function GET(req: Request) {
+  let client;
   try {
     const { searchParams } = new URL(req.url)
     const user_id = searchParams.get('user_id')
@@ -18,29 +20,30 @@ export async function GET(req: Request) {
       )
     }
 
-    const client = await clientPromise
+    client = new MongoClient(uri)
+    await client.connect()
     const db = client.db('resume_tailor')
     const collection = db.collection('full_texts')
 
     const result = await collection.findOne(
       { user_id },
-      { 
-        sort: { created_at: -1 },
-        projection: { _id: 0, text: 1 }
-      }
+      { sort: { created_at: -1 } }
     )
 
-    return NextResponse.json({ 
-      text: result?.text || '',
-      timestamp: new Date()
+    return NextResponse.json({
+      text: result?.text || ''
     })
 
-  } catch (err) {
-    console.error('Database Error:', err)
+  } catch (error) {
+    console.error('Database Error:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch resume' },
+      { error: 'Internal Server Error' },
       { status: 500 }
     )
+  } finally {
+    if (client) {
+      await client.close().catch(console.error)
+    }
   }
 }
 // /app/api/resume/get/route.ts

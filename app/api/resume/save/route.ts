@@ -26,63 +26,55 @@
 // }
 // /app/api/resume/save/route.ts
 import { NextResponse } from 'next/server'
-import clientPromise from '@/lib/mongodb'
+import { MongoClient } from 'mongodb'
 
-// Required configuration to prevent build issues
+// Critical configuration
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 export const fetchCache = 'force-no-store'
 
-export async function POST(req: Request) {
-  try {
-    // Validate request content type
-    const contentType = req.headers.get('content-type')
-    if (!contentType?.includes('application/json')) {
-      return NextResponse.json(
-        { error: 'Invalid content type' },
-        { status: 415 }
-      )
-    }
+const uri = process.env.MONGODB_URI!
 
+export async function POST(req: Request) {
+  let client;
+  try {
     const body = await req.json()
     const { user_id, title, text } = body
 
-    // Validate required fields
     if (!user_id || !text) {
       return NextResponse.json(
-        { error: 'Missing required fields: user_id or text' },
+        { error: 'Missing required fields' },
         { status: 400 }
       )
     }
 
-    // Database operations
-    const client = await clientPromise
+    client = new MongoClient(uri)
+    await client.connect()
     const db = client.db('resume_tailor')
     const collection = db.collection('full_texts')
 
     const result = await collection.insertOne({
       user_id,
-      title: title || 'Tailored Resume',
+      title: title || 'Untitled Resume',
       text,
-      source: 'tailored',
       created_at: new Date(),
       updated_at: new Date()
     })
 
     return NextResponse.json({
       success: true,
-      insertedId: result.insertedId,
-      timestamp: new Date()
+      insertedId: result.insertedId
     })
 
-  } catch (err) {
-    console.error('❌ MongoDB Save Error:', err)
+  } catch (error) {
+    console.error('Database Error:', error)
     return NextResponse.json(
-      { 
-        error: 'Database operation failed',
-        details: process.env.NODE_ENV === 'development' ? err.message : undefined
-      },
+      { error: 'Internal Server Error' },
       { status: 500 }
     )
+  } finally {
+    if (client) {
+      await client.close().catch(console.error)
+    }
   }
 }

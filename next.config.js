@@ -1,53 +1,42 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Production-ready configuration
-  output: 'standalone',
+  // Disable standalone output to prevent Windows symlink errors
+  // output: 'standalone', // Commented out for Windows compatibility
   
-  // Experimental features
   experimental: {
-    // Proper server actions configuration
-    serverActions: {
-      bodySizeLimit: '5mb'
-    },
-    // Optimize these packages
-    optimizePackageImports: [
-      'pdf-parse',
-      'mongodb'
-    ],
-    // Explicit external packages for server components
-    serverExternalPackages: ['mongodb']
+    serverActions: {},
+    optimizePackageImports: ['pdf-parse']
   },
-
-  // Webpack configuration
+  
+  // External server packages
+  serverExternalPackages: ['mongodb'],
+  
+  // Custom webpack configuration
   webpack: (config, { isServer }) => {
-    // Prevent PDF processing during build
-    config.module.noParse = /\.pdf$/;
-
-    // Add necessary polyfills only for client-side
+    // Prevent processing of PDF and MongoDB native files
+    config.module.noParse = [/\.pdf$/, /mongodb-client-encryption/];
+    
+    // Exclude problematic native modules
+    config.externals = {
+      ...config.externals,
+      'mongodb-client-encryption': 'commonjs mongodb-client-encryption',
+      'aws4': 'commonjs aws4',
+      'snappy': 'commonjs snappy',
+      'kerberos': 'commonjs kerberos'
+    };
+    
+    // Add necessary polyfills (client-side only)
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
         buffer: require.resolve('buffer'),
-        stream: require.resolve('stream-browserify'),
-        crypto: require.resolve('crypto-browserify')
+        stream: require.resolve('stream-browserify')
+        // crypto: false - intentionally removed to prevent conflicts
       };
     }
-
-    // Exclude MongoDB native extensions
-    config.externals = [...(config.externals || []), 'mongodb-client-encryption'];
-
+    
     return config;
-  },
-
-  // Turbopack configuration (optional)
-  turbo: process.env.TURBO === 'true' ? {
-    rules: {
-      // Exclude MongoDB from Turbopack processing
-      '*.node': {
-        loaders: ['file-loader']
-      }
-    }
-  } : undefined
+  }
 }
 
 module.exports = nextConfig
