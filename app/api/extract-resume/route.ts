@@ -1,4 +1,38 @@
+// import { NextResponse } from 'next/server'
+// import { MongoClient } from 'mongodb'
+// import pdfParse from 'pdf-parse'
 
+// const mongoUrl = process.env.MONGODB_URI as string
+// const client = new MongoClient(mongoUrl)
+
+// export async function POST(req: Request) {
+//   const formData = await req.formData()
+//   const file = formData.get('file') as File
+//   const userId = formData.get('user_id') as string
+//   const title = formData.get('title') as string
+
+//   if (!file || !userId) {
+//     return NextResponse.json({ error: 'Missing data' }, { status: 400 })
+//   }
+
+//   const buffer = Buffer.from(await file.arrayBuffer())
+//   const pdfData = await pdfParse(buffer)
+
+//   const resumeText = pdfData.text
+
+//   await client.connect()
+//   const db = client.db('resume_tailor')
+//   const resumes = db.collection('resumes')
+
+//   await resumes.insertOne({
+//     user_id: userId,
+//     title,
+//     content: resumeText,
+//     created_at: new Date()
+//   })
+
+//   return NextResponse.json({ success: true, textLength: resumeText.length })
+// }
 
 import { NextRequest, NextResponse } from 'next/server'
 import { MongoClient } from 'mongodb'

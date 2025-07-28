@@ -10,11 +10,12 @@ export default function TailorResumePage() {
   const searchParams = useSearchParams()
   const router = useRouter()
 
-  const title = searchParams.get('title') 
+  const title = searchParams.get('title') // e.g. passed as ?title=MyResume
 
   useEffect(() => {
     if (!title) return
 
+    // Get original resume from your MongoDB API
     fetch(`/api/get-resume?title=${title}`)
       .then(res => res.json())
       .then(data => setResumeText(data.resume || ''))

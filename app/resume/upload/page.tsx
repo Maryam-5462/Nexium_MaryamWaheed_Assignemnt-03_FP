@@ -71,7 +71,7 @@ export default function UploadResumePage() {
 
       if (insertError) throw new Error("Error saving file record")
 
-      const webhookRes = await fetch("http://localhost:5678/webhook-test/resume-tailor", {
+      const webhookRes = await fetch("http://localhost:5678/webhook/resume-tailor", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

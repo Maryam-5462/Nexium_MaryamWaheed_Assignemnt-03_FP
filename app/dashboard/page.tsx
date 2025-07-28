@@ -54,8 +54,6 @@ export default function DashboardPage() {
           <p className="text-sm text-gray-300">Generate, edit, and manage tailored resumes.</p>
         </Link>
 
-        
-
         <Link
           href="/about"
           className="bg-white/10 backdrop-blur-xl border border-purple-500 hover:border-purple-400 hover:shadow-purple-500/30 text-white p-6 rounded-2xl shadow-md transition-all duration-300 transform hover:scale-105"
