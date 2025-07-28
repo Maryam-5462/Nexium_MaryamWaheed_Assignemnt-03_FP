@@ -1,37 +1,28 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Disable standalone output to prevent Windows symlink errors
-  // output: 'standalone', // Commented out for Windows compatibility
-  
   experimental: {
     serverActions: {},
     optimizePackageImports: ['pdf-parse']
   },
-  
-  // External server packages
   serverExternalPackages: ['mongodb'],
-  
-  // Custom webpack configuration
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer }) => {  // Destructure isServer from the second parameter
     // Prevent processing of PDF and MongoDB native files
     config.module.noParse = [/\.pdf$/, /mongodb-client-encryption/];
     
-    // Exclude problematic native modules
+    // Correct externals configuration
     config.externals = {
-      ...config.externals,
+      ...(config.externals || {}),
       'mongodb-client-encryption': 'commonjs mongodb-client-encryption',
       'aws4': 'commonjs aws4',
       'snappy': 'commonjs snappy',
       'kerberos': 'commonjs kerberos'
     };
     
-    // Add necessary polyfills (client-side only)
+    // Client-side polyfills (only add if not server)
     if (!isServer) {
       config.resolve.fallback = {
-        ...config.resolve.fallback,
         buffer: require.resolve('buffer'),
         stream: require.resolve('stream-browserify')
-        // crypto: false - intentionally removed to prevent conflicts
       };
     }
     
